@@ -15,12 +15,11 @@ class RegisterView(CreateView):
     """View for user registration"""
     model = User
     form_class = CustomUserCreationForm
-    template_name = 'registration/register.html'
-    success_url = reverse_lazy('recipe_list')
+    template_name = 'registration/register.html'  # Change this line
+    success_url = reverse_lazy('recipes:recipe_list')
     
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Log the user in after registration
         login(self.request, self.object)
         messages.success(self.request, f'Welcome {self.object.username}! Your account has been created.')
         return response
@@ -41,7 +40,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = CustomUserChangeForm
     template_name = 'accounts/profile_update.html'
-    success_url = reverse_lazy('profile')
+    success_url = reverse_lazy('accounts:profile')
     
     def get_object(self):
         return self.request.user
