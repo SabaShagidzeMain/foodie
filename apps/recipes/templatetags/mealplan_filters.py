@@ -8,3 +8,11 @@ def get_item(dictionary, key):
     if dictionary is None:
         return {}
     return dictionary.get(key, {})
+
+@register.filter
+def multiply(value, arg):
+    """Multiply a value by an argument"""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        return value

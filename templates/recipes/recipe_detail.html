@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load mealplan_filters %}
 
 {% block title %}{{ recipe.title }} - Foodie{% endblock %}
 
@@ -24,10 +25,10 @@
         </div>
         <div class="col-md-4 text-end">
             {% if user == recipe.user %}
-            <a href="{% url 'recipe_update' recipe.id %}" class="btn btn-warning">
+            <a href="{% url 'recipes:recipe_update' recipe.id %}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="{% url 'recipe_delete' recipe.id %}" class="btn btn-danger">
+            <a href="{% url 'recipes:recipe_delete' recipe.id %}" class="btn btn-danger">
                 <i class="fas fa-trash"></i> Delete
             </a>
             {% endif %}
@@ -61,6 +62,25 @@
         </div>
     </div>
 
+    <!-- Serving Scaler -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Scale Recipe</h5>
+                    <div class="btn-group" role="group">
+                        <a href="?scale=1" class="btn btn-outline-primary serving-btn">×1</a>
+                        <a href="?scale=2" class="btn btn-outline-primary serving-btn">×2</a>
+                        <a href="?scale=4" class="btn btn-outline-primary serving-btn">×4</a>
+                    </div>
+                    {% if scaled %}
+                    <span class="badge bg-success ms-2">Scaled ×{{ scale_factor }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Ingredients -->
     <div class="row mb-4">
         <div class="col-12">
@@ -79,6 +99,9 @@
                             {{ ingredient.get_unit_display }}
                             {% if ingredient.notes %}
                             <small class="text-muted">({{ ingredient.notes }})</small>
+                            {% endif %}
+                            {% if ingredient.calories_per_100g > 0 %}
+                            <small class="text-muted">({{ ingredient.calories_per_100g|floatformat:1 }} kcal/100g)</small>
                             {% endif %}
                         </li>
                         {% endfor %}
@@ -101,13 +124,19 @@
                         <div class="col-md-3">
                             <strong>Per Serving:</strong> {{ nutrition.per_serving.calories|floatformat:0 }} kcal
                         </div>
+                        <div class="col-md-3">
+                            <strong>Protein:</strong> {{ nutrition.per_serving.protein|floatformat:1 }}g
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fat:</strong> {{ nutrition.per_serving.fat|floatformat:1 }}g
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <a href="{% url 'recipe_list' %}" class="btn btn-secondary">
+    <a href="{% url 'recipes:recipe_list' %}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to Recipes
     </a>
 </div>

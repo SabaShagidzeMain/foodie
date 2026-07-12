@@ -154,11 +154,15 @@ class RecipeService:
         }
         
         for ingredient in recipe.ingredients.all():
+            # Convert Decimal to float for multiplication
+            amount = float(ingredient.amount) if ingredient.amount else 0
+            calories = float(ingredient.calories_per_100g) if ingredient.calories_per_100g else 0
+            
             scaled_data['ingredients'].append({
                 'name': ingredient.name,
-                'amount': ingredient.amount * factor,
+                'amount': amount * factor,
                 'unit': ingredient.unit,
-                'calories_per_100g': ingredient.calories_per_100g,
+                'calories_per_100g': calories,
                 'notes': ingredient.notes,
                 'is_optional': ingredient.is_optional
             })
@@ -276,17 +280,24 @@ class NutritionService:
             return None
     
     def calculate_recipe_nutrition(self, recipe):
-        total_calories = 0
-        total_protein = 0
-        total_fat = 0
-        total_carbs = 0
-        total_fiber = 0
+        """Calculate total nutrition for a recipe"""
+        total_calories = 0.0
+        total_protein = 0.0
+        total_fat = 0.0
+        total_carbs = 0.0
+        total_fiber = 0.0
         
         for ingredient in recipe.ingredients.all():
-            if ingredient.calories_per_100g > 0:
+            # Convert Decimal to float for calculation
+            calories_per_100g = float(ingredient.calories_per_100g) if ingredient.calories_per_100g else 0
+            
+            if calories_per_100g > 0:
                 amount_in_grams = self._convert_to_grams(ingredient)
-                calories = (ingredient.calories_per_100g * amount_in_grams) / 100
+                calories = (calories_per_100g * amount_in_grams) / 100
                 total_calories += calories
+        
+        # Avoid division by zero
+        servings = recipe.servings if recipe.servings > 0 else 1
         
         return {
             'calories': round(total_calories, 2),
@@ -295,15 +306,16 @@ class NutritionService:
             'carbs': round(total_carbs, 2),
             'fiber': round(total_fiber, 2),
             'per_serving': {
-                'calories': round(total_calories / recipe.servings, 2),
-                'protein': round(total_protein / recipe.servings, 2),
-                'fat': round(total_fat / recipe.servings, 2),
-                'carbs': round(total_carbs / recipe.servings, 2),
-                'fiber': round(total_fiber / recipe.servings, 2),
+                'calories': round(total_calories / servings, 2),
+                'protein': round(total_protein / servings, 2),
+                'fat': round(total_fat / servings, 2),
+                'carbs': round(total_carbs / servings, 2),
+                'fiber': round(total_fiber / servings, 2),
             }
         }
     
     def _convert_to_grams(self, ingredient):
+        """Convert ingredient amount to grams"""
         conversion = {
             'g': 1,
             'kg': 1000,
@@ -319,7 +331,9 @@ class NutritionService:
             'slice': 50,
             'pinch': 1,
         }
-        return float(ingredient.amount) * conversion.get(ingredient.unit, 1)
+        # Convert Decimal to float for multiplication
+        amount = float(ingredient.amount) if ingredient.amount else 0
+        return amount * conversion.get(ingredient.unit, 1)
 
 
 class MealPlanService:
