@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load mealplan_filters %}
 
 {% block title %}Meal Plan - Foodie{% endblock %}
 
@@ -38,51 +39,127 @@
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Day</th>
-                    <th>Breakfast</th>
-                    <th>Lunch</th>
-                    <th>Dinner</th>
-                    <th>Snack</th>
+                    <th style="min-width: 100px;">Day</th>
+                    <th style="min-width: 200px;">Breakfast</th>
+                    <th style="min-width: 200px;">Lunch</th>
+                    <th style="min-width: 200px;">Dinner</th>
+                    <th style="min-width: 200px;">Snack</th>
                 </tr>
             </thead>
             <tbody>
                 {% for day in week_data %}
                 <tr>
                     <td><strong>{{ day.day_name }}</strong></td>
+                    
+                    <!-- Breakfast -->
                     <td>
                         {% if day.breakfast %}
                             <strong>{{ day.breakfast.title }}</strong>
                             <br>
-                            <a href="{% url 'recipes:recipe_detail' day.breakfast.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                            <div class="btn-group btn-group-sm mt-1">
+                                <a href="{% url 'recipes:recipe_detail' day.breakfast.id %}" class="btn btn-outline-primary">View</a>
+                                <a href="{% url 'recipes:remove_from_meal_plan' %}?week_start={{ week_start|date:'Y-m-d' }}&day={{ day.day_num }}&meal_type=breakfast" class="btn btn-outline-danger">Remove</a>
+                            </div>
                         {% else %}
-                            <span class="text-muted">Empty</span>
+                            <form method="post" action="{% url 'recipes:add_to_meal_plan' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="week_start" value="{{ week_start|date:'Y-m-d' }}">
+                                <input type="hidden" name="day" value="{{ day.day_num }}">
+                                <input type="hidden" name="meal_type" value="breakfast">
+                                <div class="input-group input-group-sm">
+                                    <select name="recipe_id" class="form-select form-select-sm">
+                                        <option value="">Select recipe...</option>
+                                        {% for recipe in user_recipes %}
+                                        <option value="{{ recipe.id }}">{{ recipe.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-success">Add</button>
+                                </div>
+                            </form>
                         {% endif %}
                     </td>
+                    
+                    <!-- Lunch -->
                     <td>
                         {% if day.lunch %}
                             <strong>{{ day.lunch.title }}</strong>
                             <br>
-                            <a href="{% url 'recipes:recipe_detail' day.lunch.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                            <div class="btn-group btn-group-sm mt-1">
+                                <a href="{% url 'recipes:recipe_detail' day.lunch.id %}" class="btn btn-outline-primary">View</a>
+                                <a href="{% url 'recipes:remove_from_meal_plan' %}?week_start={{ week_start|date:'Y-m-d' }}&day={{ day.day_num }}&meal_type=lunch" class="btn btn-outline-danger">Remove</a>
+                            </div>
                         {% else %}
-                            <span class="text-muted">Empty</span>
+                            <form method="post" action="{% url 'recipes:add_to_meal_plan' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="week_start" value="{{ week_start|date:'Y-m-d' }}">
+                                <input type="hidden" name="day" value="{{ day.day_num }}">
+                                <input type="hidden" name="meal_type" value="lunch">
+                                <div class="input-group input-group-sm">
+                                    <select name="recipe_id" class="form-select form-select-sm">
+                                        <option value="">Select recipe...</option>
+                                        {% for recipe in user_recipes %}
+                                        <option value="{{ recipe.id }}">{{ recipe.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-success">Add</button>
+                                </div>
+                            </form>
                         {% endif %}
                     </td>
+                    
+                    <!-- Dinner -->
                     <td>
                         {% if day.dinner %}
                             <strong>{{ day.dinner.title }}</strong>
                             <br>
-                            <a href="{% url 'recipes:recipe_detail' day.dinner.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                            <div class="btn-group btn-group-sm mt-1">
+                                <a href="{% url 'recipes:recipe_detail' day.dinner.id %}" class="btn btn-outline-primary">View</a>
+                                <a href="{% url 'recipes:remove_from_meal_plan' %}?week_start={{ week_start|date:'Y-m-d' }}&day={{ day.day_num }}&meal_type=dinner" class="btn btn-outline-danger">Remove</a>
+                            </div>
                         {% else %}
-                            <span class="text-muted">Empty</span>
+                            <form method="post" action="{% url 'recipes:add_to_meal_plan' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="week_start" value="{{ week_start|date:'Y-m-d' }}">
+                                <input type="hidden" name="day" value="{{ day.day_num }}">
+                                <input type="hidden" name="meal_type" value="dinner">
+                                <div class="input-group input-group-sm">
+                                    <select name="recipe_id" class="form-select form-select-sm">
+                                        <option value="">Select recipe...</option>
+                                        {% for recipe in user_recipes %}
+                                        <option value="{{ recipe.id }}">{{ recipe.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-success">Add</button>
+                                </div>
+                            </form>
                         {% endif %}
                     </td>
+                    
+                    <!-- Snack -->
                     <td>
                         {% if day.snack %}
                             <strong>{{ day.snack.title }}</strong>
                             <br>
-                            <a href="{% url 'recipes:recipe_detail' day.snack.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                            <div class="btn-group btn-group-sm mt-1">
+                                <a href="{% url 'recipes:recipe_detail' day.snack.id %}" class="btn btn-outline-primary">View</a>
+                                <a href="{% url 'recipes:remove_from_meal_plan' %}?week_start={{ week_start|date:'Y-m-d' }}&day={{ day.day_num }}&meal_type=snack" class="btn btn-outline-danger">Remove</a>
+                            </div>
                         {% else %}
-                            <span class="text-muted">Empty</span>
+                            <form method="post" action="{% url 'recipes:add_to_meal_plan' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="week_start" value="{{ week_start|date:'Y-m-d' }}">
+                                <input type="hidden" name="day" value="{{ day.day_num }}">
+                                <input type="hidden" name="meal_type" value="snack">
+                                <div class="input-group input-group-sm">
+                                    <select name="recipe_id" class="form-select form-select-sm">
+                                        <option value="">Select recipe...</option>
+                                        {% for recipe in user_recipes %}
+                                        <option value="{{ recipe.id }}">{{ recipe.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-success">Add</button>
+                                </div>
+                            </form>
                         {% endif %}
                     </td>
                 </tr>

@@ -1,4 +1,4 @@
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -254,6 +254,10 @@ class MealPlanView(LoginRequiredMixin, ListView):
         context['week_end'] = week_start + timedelta(days=6)
         context['meal_types'] = ['breakfast', 'lunch', 'dinner', 'snack']
         
+        # Get all recipes for the user to populate dropdowns
+        context['user_recipes'] = Recipe.objects.filter(user=self.request.user).order_by('title')
+        
+        # Get nutrition for the week
         service = MealPlanService(self.request.user)
         context['week_nutrition'] = service.get_week_nutrition(week_start)
         
@@ -262,51 +266,60 @@ class MealPlanView(LoginRequiredMixin, ListView):
         
         return context
 
-
-class AddToMealPlanView(LoginRequiredMixin, DetailView):
-    """View for adding a recipe to the meal plan"""
-    model = Recipe
-    template_name = 'recipes/add_to_meal_plan.html'
+class RemoveFromMealPlanView(LoginRequiredMixin, View):
+    """View for removing a recipe from the meal plan"""
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        week_start_str = self.request.GET.get('week_start')
-        if week_start_str:
-            try:
-                week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
-            except ValueError:
-                week_start = timezone.now().date()
-        else:
-            week_start = timezone.now().date()
-        week_start = week_start - timedelta(days=week_start.weekday())
-        
-        context['week_start'] = week_start
-        context['days'] = list(enumerate(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']))
-        context['meal_types'] = ['breakfast', 'lunch', 'dinner', 'snack']
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        recipe = self.get_object()
-        week_start_str = request.POST.get('week_start')
-        day = request.POST.get('day')
-        meal_type = request.POST.get('meal_type')
+    def get(self, request, *args, **kwargs):
+        week_start_str = request.GET.get('week_start')
+        day = request.GET.get('day')
+        meal_type = request.GET.get('meal_type')
         
         if not all([week_start_str, day, meal_type]):
             messages.error(request, "Missing required parameters.")
-            return redirect('recipes:recipe_detail', pk=recipe.id)
+            return redirect('recipes:meal_plan')
         
         try:
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
             day = int(day)
         except (ValueError, TypeError):
             messages.error(request, "Invalid date or day.")
-            return redirect('recipes:recipe_detail', pk=recipe.id)
+            return redirect('recipes:meal_plan')
         
         service = MealPlanService(request.user)
-        result = service.add_to_plan(week_start, day, meal_type, recipe.id)
+        service.remove_from_plan(week_start, day, meal_type)
+        
+        messages.success(request, f"Removed from {meal_type} on {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day]}")
+        return redirect('recipes:meal_plan')
+
+
+class AddToMealPlanView(LoginRequiredMixin, View):
+    """View for adding a recipe to the meal plan"""
+    
+    def post(self, request, *args, **kwargs):
+        week_start_str = request.POST.get('week_start')
+        day = request.POST.get('day')
+        meal_type = request.POST.get('meal_type')
+        recipe_id = request.POST.get('recipe_id')
+        
+        if not all([week_start_str, day, meal_type, recipe_id]):
+            messages.error(request, "Missing required parameters.")
+            return redirect('recipes:meal_plan')
+        
+        try:
+            week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+            day = int(day)
+            recipe_id = int(recipe_id)
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid parameters.")
+            return redirect('recipes:meal_plan')
+        
+        service = MealPlanService(request.user)
+        result = service.add_to_plan(week_start, day, meal_type, recipe_id)
         
         if result:
-            messages.success(request, f'Added "{recipe.title}" to meal plan!')
+            from apps.recipes.models import Recipe
+            recipe = Recipe.objects.get(id=recipe_id)
+            messages.success(request, f'Added "{recipe.title}" to {meal_type} on {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][day]}!')
         else:
             messages.error(request, "Could not add recipe to meal plan.")
         

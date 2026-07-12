@@ -3,7 +3,7 @@ from .views import (
     RecipeListView, RecipeDetailView, RecipeCreateView, 
     RecipeUpdateView, RecipeDeleteView, FavoriteToggleView,
     FavoritesListView, MyRecipesListView, MealPlanView,
-    AddToMealPlanView, nutrition_lookup_api
+    AddToMealPlanView, RemoveFromMealPlanView, nutrition_lookup_api, ingredient_search_api
 )
 
 app_name = 'recipes'
@@ -25,8 +25,10 @@ urlpatterns = [
     
     # Meal Plan URLs
     path('meal-plan/', MealPlanView.as_view(), name='meal_plan'),
-    path('meal-plan/add/<int:pk>/', AddToMealPlanView.as_view(), name='add_to_meal_plan'),
+    path('meal-plan/add/', AddToMealPlanView.as_view(), name='add_to_meal_plan'),  # Changed - removed <int:pk>
+    path('meal-plan/remove/', RemoveFromMealPlanView.as_view(), name='remove_from_meal_plan'),  # Changed - removed <int:pk>
     
-    # API - Nutrition Lookup (for auto-fill in forms)
+    # API URLs
     path('api/nutrition/lookup/', nutrition_lookup_api, name='nutrition_lookup_api'),
+    path('api/ingredients/search/', ingredient_search_api, name='ingredient_search_api'),
 ]
