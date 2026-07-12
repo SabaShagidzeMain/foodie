@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}My Recipes - Foodie{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-user-chef"></i> My Recipes</h1>
+        <a href="{% url 'recipe_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New Recipe
+        </a>
+    </div>
+    
+    <div class="row">
+        {% for recipe in recipes %}
+        <div class="col-md-4">
+            <div class="card recipe-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ recipe.title }}</h5>
+                    <p class="card-text text-muted">
+                        <i class="far fa-clock"></i> {{ recipe.prep_time|add:recipe.cook_time }} min
+                        <br>
+                        <i class="fas fa-utensils"></i> {{ recipe.servings }} servings
+                    </p>
+                    <p class="card-text">{{ recipe.description|truncatechars:100 }}</p>
+                    
+                    <div class="mt-2">
+                        {% if not recipe.is_public %}
+                        <span class="badge bg-secondary"><i class="fas fa-lock"></i> Private</span>
+                        {% else %}
+                        <span class="badge bg-success"><i class="fas fa-globe"></i> Public</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-2">
+                        <a href="{% url 'recipe_detail' recipe.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="{% url 'recipe_update' recipe.id %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'recipe_delete' recipe.id %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> You haven't created any recipes yet.
+                <a href="{% url 'recipe_create' %}">Create your first recipe!</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

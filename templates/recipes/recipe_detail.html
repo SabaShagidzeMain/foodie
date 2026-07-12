@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ recipe.title }} - Foodie{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ recipe.title }}</h1>
+            <p class="text-muted">
+                <i class="fas fa-user"></i> By {{ recipe.user.username }}
+                <span class="mx-2">|</span>
+                <i class="far fa-calendar-alt"></i> {{ recipe.created_at|date:"F j, Y" }}
+            </p>
+            
+            <div class="mb-3">
+                {% for tag in recipe.tags.all %}
+                <span class="badge bg-info tag-badge">{{ tag.name }}</span>
+                {% endfor %}
+                {% if not recipe.is_public %}
+                <span class="badge bg-secondary"><i class="fas fa-lock"></i> Private</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if user == recipe.user %}
+            <a href="{% url 'recipe_update' recipe.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'recipe_delete' recipe.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Description -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Description</h5>
+                    <p>{{ recipe.description }}</p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <strong><i class="far fa-clock"></i> Prep:</strong> {{ recipe.prep_time }} min
+                        </div>
+                        <div class="col-md-3">
+                            <strong><i class="fas fa-clock"></i> Cook:</strong> {{ recipe.cook_time }} min
+                        </div>
+                        <div class="col-md-3">
+                            <strong><i class="fas fa-clock"></i> Total:</strong> {{ recipe.total_time }} min
+                        </div>
+                        <div class="col-md-3">
+                            <strong><i class="fas fa-utensils"></i> Servings:</strong> {{ recipe.servings }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredients -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5><i class="fas fa-shopping-basket"></i> Ingredients</h5>
+                    <ul class="list-unstyled">
+                        {% for ingredient in ingredients %}
+                        <li class="py-1 border-bottom">
+                            <strong>{{ ingredient.name }}</strong>
+                            {% if scaled %}
+                            {{ ingredient.amount|multiply:scale_factor|floatformat:1 }}
+                            {% else %}
+                            {{ ingredient.amount|floatformat:1 }}
+                            {% endif %}
+                            {{ ingredient.get_unit_display }}
+                            {% if ingredient.notes %}
+                            <small class="text-muted">({{ ingredient.notes }})</small>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrition -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5><i class="fas fa-heartbeat"></i> Nutrition</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Total:</strong> {{ nutrition.total_calories|floatformat:0 }} kcal
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Per Serving:</strong> {{ nutrition.per_serving.calories|floatformat:0 }} kcal
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'recipe_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Recipes
+    </a>
+</div>
+{% endblock %}

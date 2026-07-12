@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Recipes - Foodie{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="fas fa-book-open"></i> Recipes</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if user.is_authenticated %}
+            <a href="{% url 'recipes:recipe_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Recipe
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <form method="get" class="search-form">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search recipes..."
+                           value="{{ search_query }}">
+                    <select name="category" class="form-select" style="max-width: 150px;">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.0 }}" {% if category == cat.0 %}selected{% endif %}>
+                            {{ cat.1 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recipe Grid -->
+    <div class="row">
+        {% for recipe in recipes %}
+        <div class="col-md-4">
+            <div class="card recipe-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ recipe.title }}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="fas fa-user"></i> {{ recipe.user.username }}
+                        <br>
+                        <i class="far fa-clock"></i> {{ recipe.prep_time|add:recipe.cook_time }} min
+                        <br>
+                        <i class="fas fa-utensils"></i> {{ recipe.servings }} servings
+                    </p>
+                    <p class="card-text">{{ recipe.description|truncatechars:100 }}</p>
+                    
+                    <div class="mb-2">
+                        {% for tag in recipe.tags.all %}
+                        <span class="badge bg-info tag-badge">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <a href="{% url 'recipes:recipe_detail' recipe.id %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-eye"></i> View Recipe
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No recipes found.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

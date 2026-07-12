@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Meal Plan - Foodie{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-calendar-week"></i> Weekly Meal Plan</h1>
+        <div>
+            <a href="?week_start={{ prev_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                <i class="fas fa-chevron-left"></i> Previous Week
+            </a>
+            <a href="?week_start={{ next_week|date:'Y-m-d' }}" class="btn btn-outline-primary">
+                Next Week <i class="fas fa-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Week of {{ week_start|date:"F j, Y" }} - {{ week_end|date:"F j, Y" }}</h5>
+            
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <strong>Total Calories:</strong> {{ week_nutrition.total_calories|floatformat:0 }} kcal
+                </div>
+                <div class="col-md-3">
+                    <strong>Daily Average:</strong> {{ week_nutrition.daily_average|floatformat:0 }} kcal
+                </div>
+                <div class="col-md-3">
+                    <strong>Total Meals:</strong> {{ week_nutrition.total_meals }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Breakfast</th>
+                    <th>Lunch</th>
+                    <th>Dinner</th>
+                    <th>Snack</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in week_data %}
+                <tr>
+                    <td><strong>{{ day.day_name }}</strong></td>
+                    <td>
+                        {% if day.breakfast %}
+                            <strong>{{ day.breakfast.title }}</strong>
+                            <br>
+                            <a href="{% url 'recipes:recipe_detail' day.breakfast.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                        {% else %}
+                            <span class="text-muted">Empty</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if day.lunch %}
+                            <strong>{{ day.lunch.title }}</strong>
+                            <br>
+                            <a href="{% url 'recipes:recipe_detail' day.lunch.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                        {% else %}
+                            <span class="text-muted">Empty</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if day.dinner %}
+                            <strong>{{ day.dinner.title }}</strong>
+                            <br>
+                            <a href="{% url 'recipes:recipe_detail' day.dinner.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                        {% else %}
+                            <span class="text-muted">Empty</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if day.snack %}
+                            <strong>{{ day.snack.title }}</strong>
+                            <br>
+                            <a href="{% url 'recipes:recipe_detail' day.snack.id %}" class="btn btn-sm btn-outline-primary mt-1">View</a>
+                        {% else %}
+                            <span class="text-muted">Empty</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
