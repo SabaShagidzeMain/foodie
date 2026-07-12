@@ -6,9 +6,14 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="fas fa-user-chef"></i> My Recipes</h1>
-        <a href="{% url 'recipe_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Create New Recipe
-        </a>
+        <div>
+            <a href="{% url 'recipes:recipe_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Recipe
+            </a>
+            <a href="{% url 'recipes:recipe_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> All Recipes
+            </a>
+        </div>
     </div>
     
     <div class="row">
@@ -21,6 +26,8 @@
                         <i class="far fa-clock"></i> {{ recipe.prep_time|add:recipe.cook_time }} min
                         <br>
                         <i class="fas fa-utensils"></i> {{ recipe.servings }} servings
+                        <br>
+                        <i class="far fa-calendar-alt"></i> {{ recipe.created_at|date:"M d, Y" }}
                     </p>
                     <p class="card-text">{{ recipe.description|truncatechars:100 }}</p>
                     
@@ -33,13 +40,13 @@
                     </div>
                     
                     <div class="mt-2">
-                        <a href="{% url 'recipe_detail' recipe.id %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'recipes:recipe_detail' recipe.id %}" class="btn btn-primary btn-sm">
                             <i class="fas fa-eye"></i> View
                         </a>
-                        <a href="{% url 'recipe_update' recipe.id %}" class="btn btn-warning btn-sm">
+                        <a href="{% url 'recipes:recipe_update' recipe.id %}" class="btn btn-warning btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <a href="{% url 'recipe_delete' recipe.id %}" class="btn btn-danger btn-sm">
+                        <a href="{% url 'recipes:recipe_delete' recipe.id %}" class="btn btn-danger btn-sm">
                             <i class="fas fa-trash"></i>
                         </a>
                     </div>
@@ -50,7 +57,7 @@
         <div class="col-12">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> You haven't created any recipes yet.
-                <a href="{% url 'recipe_create' %}">Create your first recipe!</a>
+                <a href="{% url 'recipes:recipe_create' %}">Create your first recipe!</a>
             </div>
         </div>
         {% endfor %}

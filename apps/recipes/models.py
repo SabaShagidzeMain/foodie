@@ -135,7 +135,12 @@ class Ingredient(models.Model):
     name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='g')
-    calories_per_100g = models.PositiveIntegerField(default=0, help_text='Calories per 100g')
+    calories_per_100g = models.DecimalField(
+    max_digits=10, 
+    decimal_places=2, 
+    default=0, 
+    help_text='Calories per 100g'
+)
     
     # Optional: Notes like "chopped", "melted", etc.
     notes = models.CharField(max_length=100, blank=True, default='')

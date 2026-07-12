@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Recipe - Foodie{% endblock %}
 
@@ -12,15 +11,101 @@
                     <h3>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Recipe</h3>
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="recipe-form">
                         {% csrf_token %}
-                        {{ form.as_p }}
                         
-                        <div class="mt-3">
+                        <!-- Recipe Details -->
+                        <h5 class="mb-3">Recipe Details</h5>
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% if field.errors %}
+                            <div class="alert alert-danger mt-1">
+                                {{ field.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Ingredients -->
+                        <h5 class="mb-3 mt-4">Ingredients <small class="text-muted">(Calories auto-fetched from Edamam)</small></h5>
+                        {{ ingredient_formset.management_form }}
+                        <div id="ingredient-forms">
+                            {% for ingredient_form in ingredient_formset %}
+                            <div class="ingredient-form card mb-2 p-3" data-form-index="{{ forloop.counter0 }}">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {{ ingredient_form.name.label_tag }}
+                                        {{ ingredient_form.name }}
+                                        <small class="text-muted calories-status" id="calories-status-{{ forloop.counter0 }}">Enter name to fetch</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ ingredient_form.amount.label_tag }}
+                                        {{ ingredient_form.amount }}
+                                        {% if ingredient_form.amount.errors %}
+                                        <div class="text-danger small">{{ ingredient_form.amount.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ ingredient_form.unit.label_tag }}
+                                        {{ ingredient_form.unit }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ ingredient_form.calories_per_100g.label_tag }}
+                                        {{ ingredient_form.calories_per_100g }}
+                                        {% if ingredient_form.calories_per_100g.errors %}
+                                        <div class="text-danger small">{{ ingredient_form.calories_per_100g.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {{ ingredient_form.notes.label_tag }}
+                                        {{ ingredient_form.notes }}
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            {{ ingredient_form.is_optional }}
+                                            <label class="form-check-label" for="{{ ingredient_form.is_optional.id_for_label }}">
+                                                Optional ingredient
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% if ingredient_form.instance.pk %}
+                                    <div class="col-md-6 text-end">
+                                        <div class="form-check">
+                                            {{ ingredient_form.DELETE }}
+                                            <label class="form-check-label text-danger" for="{{ ingredient_form.DELETE.id_for_label }}">
+                                                Remove this ingredient
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if ingredient_form.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ ingredient_form.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-ingredient">
+                            <i class="fas fa-plus"></i> Add Another Ingredient
+                        </button>
+                        
+                        <div class="mt-4">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Save Recipe
                             </button>
-                            <a href="{% url 'recipe_list' %}" class="btn btn-secondary">
+                            <a href="{% url 'recipes:recipe_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Cancel
                             </a>
                         </div>
@@ -30,4 +115,190 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function fetchCalories(input) {
+        const form = input.closest('.ingredient-form');
+        const name = input.value.trim();
+        const caloriesField = form.querySelector('input[name$="-calories_per_100g"]');
+        const statusEl = form.querySelector('.calories-status');
+        
+        if (!name || name.length < 2) {
+            if (caloriesField) {
+                caloriesField.value = '';
+                caloriesField.readOnly = false;
+            }
+            if (statusEl) {
+                statusEl.textContent = 'Enter name to fetch';
+                statusEl.style.color = '#6c757d';
+            }
+            return;
+        }
+        
+        if (statusEl) {
+            statusEl.textContent = '⏳ Fetching calories...';
+            statusEl.style.color = '#6c757d';
+        }
+        
+        fetch(`/api/nutrition/lookup/?ingredient=${encodeURIComponent(name)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.calories && data.calories > 0) {
+                    if (caloriesField) {
+                        caloriesField.value = data.calories;  // Keep decimal
+                        caloriesField.readOnly = true;
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = `✅ ${data.calories} kcal/100g (from Edamam)`;
+                        statusEl.style.color = '#28a745';
+                    }
+                } else {
+                    if (caloriesField) {
+                        caloriesField.value = '';
+                        caloriesField.readOnly = false;
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = '⚠️ Could not fetch. Enter manually.';
+                        statusEl.style.color = '#dc3545';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (caloriesField) {
+                    caloriesField.value = '';
+                    caloriesField.readOnly = false;
+                }
+                if (statusEl) {
+                    statusEl.textContent = '❌ API error. Enter manually.';
+                    statusEl.style.color = '#dc3545';
+                }
+            });
+    }
+    
+    // Bind to existing ingredient name fields
+    document.querySelectorAll('.ingredient-form input[name$="-name"]').forEach(function(input) {
+        if (!input.dataset.bound) {
+            input.dataset.bound = 'true';
+            input.addEventListener('blur', function() {
+                fetchCalories(this);
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    fetchCalories(this);
+                }
+            });
+        }
+    });
+    
+    // Handle dynamically added forms
+    const addButton = document.getElementById('add-ingredient');
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            const forms = document.querySelectorAll('.ingredient-form');
+            const formCount = forms.length;
+            const totalForms = document.getElementById('id_ingredients-TOTAL_FORMS');
+            
+            const lastForm = forms[forms.length - 1];
+            const newForm = lastForm.cloneNode(true);
+            
+            const formRegex = new RegExp('ingredients-(\\d+)-', 'g');
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `ingredients-${formCount}-`);
+            newForm.innerHTML = newForm.innerHTML.replace(/id_ingredients-(\d+)-/g, `id_ingredients-${formCount}-`);
+            
+            newForm.querySelectorAll('input, select, textarea').forEach(input => {
+                if (input.type !== 'checkbox' && input.type !== 'hidden') {
+                    input.value = '';
+                } else if (input.type === 'checkbox') {
+                    input.checked = false;
+                }
+            });
+            
+            const statusEl = newForm.querySelector('.calories-status');
+            if (statusEl) {
+                statusEl.textContent = 'Enter name to fetch';
+                statusEl.style.color = '#6c757d';
+            }
+            
+            const deleteField = newForm.querySelector('.form-check [type="checkbox"]');
+            if (deleteField) {
+                const deleteContainer = deleteField.closest('.col-md-6');
+                if (deleteContainer) {
+                    deleteContainer.remove();
+                }
+            }
+            
+            newForm.querySelectorAll('.alert-danger').forEach(el => el.remove());
+            
+            const nameInput = newForm.querySelector('input[name$="-name"]');
+            if (nameInput) {
+                nameInput.dataset.bound = '';
+            }
+            
+            document.getElementById('ingredient-forms').appendChild(newForm);
+            
+            if (totalForms) {
+                totalForms.value = formCount + 1;
+            }
+            
+            if (nameInput) {
+                nameInput.dataset.bound = 'true';
+                nameInput.addEventListener('blur', function() {
+                    fetchCalories(this);
+                });
+                nameInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        fetchCalories(this);
+                    }
+                });
+            }
+        });
+    }
+});
+</script>
+
+<style>
+    .ingredient-form {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .ingredient-form:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 0 10px rgba(13, 110, 253, 0.1);
+    }
+    .ingredient-form .form-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    .ingredient-form .form-control,
+    .ingredient-form .form-select {
+        font-size: 0.9rem;
+    }
+    .ingredient-form .form-control:focus,
+    .ingredient-form .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    .calories-status {
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 2px;
+        min-height: 18px;
+    }
+    .ingredient-form input[name$="-calories_per_100g"] {
+        background-color: #e9ecef;
+    }
+    .ingredient-form input[name$="-calories_per_100g"]:not([readonly]) {
+        background-color: #fff8e1;
+    }
+    .ingredient-form input[name$="-calories_per_100g"][readonly] {
+        background-color: #e8f5e9;
+    }
+</style>
 {% endblock %}

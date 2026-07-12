@@ -2,17 +2,18 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db import models
 from .models import Recipe, Tag
-from .forms import RecipeForm
+from .forms import RecipeForm, IngredientFormSet
 from .services import RecipeService, NutritionService, MealPlanService
-from .mixins import RecipeOwnerRequiredMixin, RecipeVisibilityMixin
+from .mixins import RecipeOwnerRequiredMixin
 import logging
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_GET
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,6 @@ class RecipeListView(ListView):
         category = self.request.GET.get('category')
         tag = self.request.GET.get('tag')
         
-        # Check if user wants to see their own recipes
         if self.request.GET.get('my_recipes') and self.request.user.is_authenticated:
             return Recipe.objects.filter(user=self.request.user).order_by('-created_at')
         
@@ -70,11 +70,8 @@ class RecipeDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         recipe = context['recipe']
         
-        # Get ingredients
-        ingredients = recipe.ingredients.all()
-        context['ingredients'] = ingredients
+        context['ingredients'] = recipe.ingredients.all()
         
-        # Handle serving scaling
         scale_factor = int(self.request.GET.get('scale', 1))
         if scale_factor in [1, 2, 4]:
             context['scale_factor'] = scale_factor
@@ -83,7 +80,6 @@ class RecipeDetailView(DetailView):
             context['scale_factor'] = 1
             context['scaled'] = False
         
-        # Calculate nutrition
         nutrition_service = NutritionService()
         context['nutrition'] = nutrition_service.calculate_recipe_nutrition(recipe)
         
@@ -91,45 +87,71 @@ class RecipeDetailView(DetailView):
 
 
 class RecipeCreateView(LoginRequiredMixin, CreateView):
-    """View for creating a new recipe"""
+    """View for creating a new recipe with ingredients"""
     model = Recipe
     form_class = RecipeForm
     template_name = 'recipes/recipe_form.html'
-    success_url = reverse_lazy('recipe_list')
+    success_url = reverse_lazy('recipes:recipe_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['ingredient_formset'] = IngredientFormSet(self.request.POST)
+        else:
+            context['ingredient_formset'] = IngredientFormSet()
+        return context
     
     def form_valid(self, form):
         form.instance.user = self.request.user
-        response = super().form_valid(form)
-        messages.success(self.request, f'Recipe "{form.instance.title}" created successfully!')
-        return response
-    
-    def form_invalid(self, form):
-        messages.error(self.request, "Please correct the errors below.")
-        return super().form_invalid(form)
+        context = self.get_context_data()
+        ingredient_formset = context['ingredient_formset']
+        
+        if ingredient_formset.is_valid():
+            self.object = form.save()
+            ingredient_formset.instance = self.object
+            ingredient_formset.save()
+            messages.success(self.request, f'Recipe "{form.instance.title}" created successfully!')
+            return super().form_valid(form)
+        else:
+            messages.error(self.request, "Please correct the errors below.")
+            return self.render_to_response(self.get_context_data(form=form))
 
 
 class RecipeUpdateView(LoginRequiredMixin, RecipeOwnerRequiredMixin, UpdateView):
-    """View for updating a recipe"""
+    """View for updating a recipe with ingredients"""
     model = Recipe
     form_class = RecipeForm
     template_name = 'recipes/recipe_form.html'
-    success_url = reverse_lazy('recipe_list')
+    success_url = reverse_lazy('recipes:recipe_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['ingredient_formset'] = IngredientFormSet(self.request.POST, instance=self.object)
+        else:
+            context['ingredient_formset'] = IngredientFormSet(instance=self.object)
+        return context
     
     def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f'Recipe "{form.instance.title}" updated successfully!')
-        return response
-    
-    def form_invalid(self, form):
-        messages.error(self.request, "Please correct the errors below.")
-        return super().form_invalid(form)
+        context = self.get_context_data()
+        ingredient_formset = context['ingredient_formset']
+        
+        if ingredient_formset.is_valid():
+            self.object = form.save()
+            ingredient_formset.instance = self.object
+            ingredient_formset.save()
+            messages.success(self.request, f'Recipe "{form.instance.title}" updated successfully!')
+            return super().form_valid(form)
+        else:
+            messages.error(self.request, "Please correct the errors below.")
+            return self.render_to_response(self.get_context_data(form=form))
 
 
 class RecipeDeleteView(LoginRequiredMixin, RecipeOwnerRequiredMixin, DeleteView):
     """View for deleting a recipe"""
     model = Recipe
     template_name = 'recipes/recipe_confirm_delete.html'
-    success_url = reverse_lazy('recipe_list')
+    success_url = reverse_lazy('recipes:recipe_list')
     
     def delete(self, request, *args, **kwargs):
         recipe = self.get_object()
@@ -152,7 +174,7 @@ class FavoriteToggleView(LoginRequiredMixin, DetailView):
         else:
             messages.info(request, f'Removed "{recipe.title}" from favorites.')
         
-        return redirect('recipe_detail', pk=recipe.id)
+        return redirect('recipes:recipe_detail', pk=recipe.id)
 
 
 class FavoritesListView(LoginRequiredMixin, ListView):
@@ -185,7 +207,6 @@ class MealPlanView(LoginRequiredMixin, ListView):
     context_object_name = 'recipes'
     
     def _get_week_start(self):
-        """Get the Monday of the current week"""
         week_start_str = self.request.GET.get('week_start')
         if week_start_str:
             try:
@@ -195,28 +216,22 @@ class MealPlanView(LoginRequiredMixin, ListView):
         else:
             week_start = timezone.now().date()
         
-        # Get Monday of the week
         week_start = week_start - timedelta(days=week_start.weekday())
         return week_start
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Get week start
         week_start = self._get_week_start()
         
-        # Get meal plans
         from apps.mealplans.models import MealPlan
         plans = MealPlan.objects.filter(
             user=self.request.user,
             week_start=week_start
         ).select_related('recipe')
         
-        # Build a simple list for the template
-        # Each item: {'day': 0, 'day_name': 'Monday', 'breakfast': recipe or None, 'lunch': ..., etc}
         week_data = []
         day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        meal_types = ['breakfast', 'lunch', 'dinner', 'snack']
         
         for day_num in range(7):
             day_info = {
@@ -228,7 +243,6 @@ class MealPlanView(LoginRequiredMixin, ListView):
                 'snack': None
             }
             
-            # Find plans for this day
             for plan in plans:
                 if plan.day_of_week == day_num:
                     day_info[plan.meal_type] = plan.recipe
@@ -240,15 +254,14 @@ class MealPlanView(LoginRequiredMixin, ListView):
         context['week_end'] = week_start + timedelta(days=6)
         context['meal_types'] = ['breakfast', 'lunch', 'dinner', 'snack']
         
-        # Get nutrition for the week
         service = MealPlanService(self.request.user)
         context['week_nutrition'] = service.get_week_nutrition(week_start)
         
-        # Previous and next week
         context['prev_week'] = week_start - timedelta(days=7)
         context['next_week'] = week_start + timedelta(days=7)
         
         return context
+
 
 class AddToMealPlanView(LoginRequiredMixin, DetailView):
     """View for adding a recipe to the meal plan"""
@@ -257,7 +270,6 @@ class AddToMealPlanView(LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Get week start
         week_start_str = self.request.GET.get('week_start')
         if week_start_str:
             try:
@@ -281,14 +293,14 @@ class AddToMealPlanView(LoginRequiredMixin, DetailView):
         
         if not all([week_start_str, day, meal_type]):
             messages.error(request, "Missing required parameters.")
-            return redirect('recipe_detail', pk=recipe.id)
+            return redirect('recipes:recipe_detail', pk=recipe.id)
         
         try:
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
             day = int(day)
         except (ValueError, TypeError):
             messages.error(request, "Invalid date or day.")
-            return redirect('recipe_detail', pk=recipe.id)
+            return redirect('recipes:recipe_detail', pk=recipe.id)
         
         service = MealPlanService(request.user)
         result = service.add_to_plan(week_start, day, meal_type, recipe.id)
@@ -298,4 +310,85 @@ class AddToMealPlanView(LoginRequiredMixin, DetailView):
         else:
             messages.error(request, "Could not add recipe to meal plan.")
         
-        return redirect('meal_plan')
+        return redirect('recipes:meal_plan')
+
+
+# ============ API Endpoints ============
+
+@require_GET
+def nutrition_lookup_api(request):
+    """
+    API endpoint to look up nutrition data for an ingredient.
+    Used by the recipe form to auto-fill calories.
+    """
+    ingredient_name = request.GET.get('ingredient', '').strip()
+    
+    if not ingredient_name:
+        return JsonResponse({
+            'error': 'No ingredient provided'
+        }, status=400)
+    
+    if len(ingredient_name) < 2:
+        return JsonResponse({
+            'error': 'Ingredient name must be at least 2 characters'
+        }, status=400)
+    
+    try:
+        service = NutritionService()
+        nutrition_data = service.get_ingredient_nutrition(ingredient_name)
+        
+        if nutrition_data and nutrition_data.get('calories', 0) > 0:
+            return JsonResponse({
+                'success': True,
+                'name': ingredient_name,
+                'calories': nutrition_data.get('calories', 0),
+                'protein': nutrition_data.get('protein', 0),
+                'fat': nutrition_data.get('fat', 0),
+                'carbs': nutrition_data.get('carbs', 0),
+                'fiber': nutrition_data.get('fiber', 0),
+                'message': f"Found {nutrition_data.get('calories', 0)} calories per 100g"
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Could not find nutrition data for this ingredient',
+                'calories': 0
+            }, status=404)
+            
+    except Exception as e:
+        logger.error(f"Nutrition lookup error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An error occurred while fetching nutrition data'
+        }, status=500)
+
+
+@require_GET
+def ingredient_search_api(request):
+    """
+    API endpoint to search for ingredients from Edamam.
+    Returns matching ingredients for autocomplete dropdown.
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return JsonResponse({
+            'success': True,
+            'results': []
+        })
+    
+    try:
+        service = NutritionService()
+        results = service.search_ingredients(query)
+        
+        return JsonResponse({
+            'success': True,
+            'results': results
+        })
+    except Exception as e:
+        logger.error(f"Ingredient search error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'results': []
+        }, status=500)
