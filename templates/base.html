@@ -11,10 +11,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Make html and body take full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        
         body {
+            display: flex;
+            flex-direction: column;
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
         }
+        
+        /* Main content should grow to fill space */
+        main {
+            flex: 1 0 auto;
+        }
+        
         .navbar-brand {
             font-weight: bold;
             font-size: 1.5rem;
@@ -30,12 +45,17 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
+        
+        /* Footer stays at bottom */
         .footer {
+            flex-shrink: 0;
             background-color: #343a40;
             color: white;
             padding: 20px 0;
             margin-top: 50px;
+            width: 100%;
         }
+        
         .rating-stars {
             color: #ffc107;
         }
@@ -143,7 +163,7 @@
     </div>
 
     <!-- Main Content -->
-    <main>
+    <main class="container py-4">
         {% block content %}
         {% endblock %}
     </main>

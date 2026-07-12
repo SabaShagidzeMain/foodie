@@ -4,9 +4,12 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    """Get an item from a dictionary"""
+    """Get an item from a dictionary or check if recipe is favorited"""
     if dictionary is None:
-        return {}
+        return False
+    if hasattr(dictionary, 'favorited_by'):
+        # If it's a recipe, check if user has favorited it
+        return dictionary.favorited_by.filter(user=key).exists()
     return dictionary.get(key, {})
 
 @register.filter

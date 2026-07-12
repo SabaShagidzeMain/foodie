@@ -174,6 +174,10 @@ class FavoriteToggleView(LoginRequiredMixin, DetailView):
         else:
             messages.info(request, f'Removed "{recipe.title}" from favorites.')
         
+        # Check where the request came from
+        next_url = request.GET.get('next', None)
+        if next_url:
+            return redirect(next_url)
         return redirect('recipes:recipe_detail', pk=recipe.id)
 
 
